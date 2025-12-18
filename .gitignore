@@ -10,15 +10,22 @@ local.properties
 # IntelliJ / Android Studio
 .idea/
 *.iml
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
 
 # Android (misc)
 *.hprof
 .cxx/
 **/.cxx/
-captures/
-**/captures/
+.externalNativeBuild
 externalNativeBuild/
 **/externalNativeBuild/
+captures/
+**/captures/
 
 # OS
 .DS_Store
