@@ -1,12 +1,14 @@
 package com.securenode.sdk.sample
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.securenode.sdk.SecureNodeConfig
 import com.securenode.sdk.SecureNodeSDK
 import com.securenode.sdk.security.KeyStoreManager
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
 class SdkSyncWorker(
@@ -18,7 +20,8 @@ class SdkSyncWorker(
     override suspend fun doWork(): Result {
         val apiKey = KeyStoreManager(applicationContext).getApiKey()
         if (apiKey.isNullOrBlank()) {
-            return Result.retry()
+            // Periodic work will run again later; don't spin retries when the user hasn't onboarded yet.
+            return Result.success()
         }
 
         val sdk = SecureNodeSDK.initialize(
@@ -35,6 +38,14 @@ class SdkSyncWorker(
                 cont.resume(out)
             }
         }
+    }
+
+    companion object {
+        // Keep these in one place so scheduling code can reference the same contract.
+        const val UNIQUE_WORK_NAME = "securenode-sdk-sync"
+        val BACKOFF_POLICY = BackoffPolicy.EXPONENTIAL
+        val BACKOFF_DELAY: Long = 30
+        val BACKOFF_UNIT: TimeUnit = TimeUnit.SECONDS
     }
 }
 

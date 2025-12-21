@@ -8,12 +8,15 @@ import com.securenode.sdk.SecureNodeConfig
 import com.securenode.sdk.SecureNodeSDK
 import com.securenode.sdk.security.KeyStoreManager
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
     private val apiBaseUrl = "https://api.securenode.io"
+    private var lastHadApiKey: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,21 +39,48 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         ensureApiKeyOrScan()
+        // If the user just scanned a key, kick a sync right away.
+        val hasKeyNow = !KeyStoreManager(applicationContext).getApiKey().isNullOrBlank()
+        if (!lastHadApiKey && hasKeyNow) {
+            val status = findViewById<TextView>(R.id.status)
+            status.text = "Status: syncing…"
+            schedulePeriodicSync()
+            runInitialSync(status)
+        }
+        lastHadApiKey = hasKeyNow
     }
 
     private fun ensureApiKeyOrScan() {
         val keyStore = KeyStoreManager(applicationContext)
         val apiKey = keyStore.getApiKey()
-        if (apiKey.isNullOrBlank()) {
+        lastHadApiKey = !apiKey.isNullOrBlank()
+        if (!lastHadApiKey) {
             startActivity(android.content.Intent(this, QrScanActivity::class.java))
         }
     }
 
     private fun schedulePeriodicSync() {
-        val request = PeriodicWorkRequestBuilder<SdkSyncWorker>(15, TimeUnit.MINUTES).build()
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+
+        val request = PeriodicWorkRequestBuilder<SdkSyncWorker>(
+            15, TimeUnit.MINUTES,
+            5, TimeUnit.MINUTES
+        )
+            .setConstraints(constraints)
+            .setBackoffCriteria(
+                SdkSyncWorker.BACKOFF_POLICY,
+                SdkSyncWorker.BACKOFF_DELAY,
+                SdkSyncWorker.BACKOFF_UNIT
+            )
+            .build()
+
         WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
-            "securenode-sdk-sync",
-            ExistingPeriodicWorkPolicy.UPDATE,
+            SdkSyncWorker.UNIQUE_WORK_NAME,
+            // KEEP avoids resetting the next-run timer every time the app opens.
+            ExistingPeriodicWorkPolicy.KEEP,
             request
         )
     }

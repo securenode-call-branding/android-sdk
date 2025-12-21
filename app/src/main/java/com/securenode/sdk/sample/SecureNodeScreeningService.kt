@@ -49,21 +49,19 @@ class SecureNodeScreeningService : CallScreeningService() {
     ) {
         ensureChannel()
 
-        val text = buildString {
-            append(number)
-            if (!callReason.isNullOrBlank()) {
-                append(" • ")
-                append(callReason)
-            }
-        }
+        val primary = if (!callReason.isNullOrBlank()) callReason else "Verified business call"
+        val text = "$primary • $number"
 
         val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentTitle(brandName)
             .setContentText(text)
+            .setSubText("Verified by SecureNode")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setAutoCancel(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         // Best-effort: attach cached logo as large icon (only if already cached).
         if (!logoUrl.isNullOrBlank()) {
