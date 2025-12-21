@@ -32,7 +32,12 @@ class SdkSyncWorker(
         return suspendCancellableCoroutine { cont ->
             sdk.syncBranding { result ->
                 val out = result.fold(
-                    onSuccess = { Result.success() },
+                    onSuccess = {
+                        // Persist config for ring-time behavior (skip branding when capped, label Testing in demo)
+                        SampleConfigStore.setBrandingEnabled(applicationContext, it.config.brandingEnabled)
+                        SampleConfigStore.setMode(applicationContext, it.config.mode)
+                        Result.success()
+                    },
                     onFailure = { Result.retry() }
                 )
                 cont.resume(out)

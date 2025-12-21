@@ -23,6 +23,8 @@ class SecureNodeScreeningService : CallScreeningService() {
         respondToCall(callDetails, CallResponse.Builder().build())
 
         if (incoming.isBlank()) return
+        // If the account is capped/disabled, pass-through (do not display branding).
+        if (!SampleConfigStore.isBrandingEnabled(applicationContext)) return
         // Normalize basic: ensure it starts with +
         val e164 = if (incoming.startsWith("+")) incoming else "+$incoming"
 
@@ -49,14 +51,17 @@ class SecureNodeScreeningService : CallScreeningService() {
     ) {
         ensureChannel()
 
+        val mode = SampleConfigStore.getMode(applicationContext)
+        val isTesting = mode.equals("testing", ignoreCase = true) || mode.equals("demo", ignoreCase = true)
+
         val primary = if (!callReason.isNullOrBlank()) callReason else "Verified business call"
-        val text = "$primary • $number"
+        val text = if (isTesting) "TESTING • $primary • $number" else "$primary • $number"
 
         val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.sym_call_incoming)
-            .setContentTitle(brandName)
+            .setContentTitle(if (isTesting) "TESTING • $brandName" else brandName)
             .setContentText(text)
-            .setSubText("Verified by SecureNode")
+            .setSubText(if (isTesting) "Testing • Verified by SecureNode" else "Verified by SecureNode")
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)

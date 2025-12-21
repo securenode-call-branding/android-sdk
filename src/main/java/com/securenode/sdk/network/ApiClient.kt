@@ -89,7 +89,9 @@ class ApiClient(
                 config = run {
                     val cfg = json.optJSONObject("config")
                     SyncConfig(
-                        voipDialerEnabled = cfg?.optBoolean("voip_dialer_enabled", false) ?: false
+                        voipDialerEnabled = cfg?.optBoolean("voip_dialer_enabled", false) ?: false,
+                        mode = cfg?.optString("mode")?.takeIf { it.isNotBlank() } ?: "live",
+                        brandingEnabled = cfg?.optBoolean("branding_enabled", true) ?: true
                     )
                 }
             )
@@ -165,6 +167,8 @@ data class SyncResponse(
 )
 
 data class SyncConfig(
-    val voipDialerEnabled: Boolean = false
+    val voipDialerEnabled: Boolean = false,
+    val mode: String = "live",
+    val brandingEnabled: Boolean = true
 )
 

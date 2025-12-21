@@ -116,6 +116,10 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 result.fold(
                     onSuccess = {
+                        // Persist config for ring-time behavior (skip branding when capped, label Testing in demo)
+                        SampleConfigStore.setBrandingEnabled(applicationContext, it.config.brandingEnabled)
+                        SampleConfigStore.setMode(applicationContext, it.config.mode)
+
                         status.text = "Status: synced • waiting for calls"
                         voipEnabled = it.config.voipDialerEnabled
                         if (android.os.Build.VERSION.SDK_INT < 26) {
