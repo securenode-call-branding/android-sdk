@@ -85,7 +85,13 @@ class ApiClient(
 
             SyncResponse(
                 branding = brandingList,
-                syncedAt = json.getString("synced_at")
+                syncedAt = json.getString("synced_at"),
+                config = run {
+                    val cfg = json.optJSONObject("config")
+                    SyncConfig(
+                        voipDialerEnabled = cfg?.optBoolean("voip_dialer_enabled", false) ?: false
+                    )
+                }
             )
         } catch (e: Exception) {
             Log.e(TAG, "Sync failed", e)
@@ -154,6 +160,11 @@ data class BrandingInfo(
  */
 data class SyncResponse(
     val branding: List<BrandingInfo>,
-    val syncedAt: String
+    val syncedAt: String,
+    val config: SyncConfig = SyncConfig()
+)
+
+data class SyncConfig(
+    val voipDialerEnabled: Boolean = false
 )
 

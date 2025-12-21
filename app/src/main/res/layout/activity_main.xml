@@ -39,6 +39,22 @@
             android:textSize="12sp"
             android:text="Status: idle" />
 
+        <TextView
+            android:id="@+id/voipStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textSize="12sp"
+            android:text="VoIP dialer mode: checking…" />
+
+        <Button
+            android:id="@+id/voipDemo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:enabled="false"
+            android:text="Open VoIP Dialer Demo" />
+
     </LinearLayout>
 </ScrollView>
 

@@ -17,7 +17,7 @@ import kotlinx.coroutines.withContext
 /**
  * SecureNode Android SDK
  * 
- * Provides branding integration for incoming calls via ConnectionService.
+ * Provides branding data sync + lookup for incoming call surfaces (PSTN assist) and in-app calling (VoIP) integrations.
  * Handles local caching, API synchronization, and secure credential storage.
  */
 class SecureNodeSDK private constructor(
