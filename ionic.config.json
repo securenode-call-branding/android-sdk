@@ -1,0 +1,8 @@
+{
+  "name": "SampleNodeKit",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite",
+  "id": "a9dd98dc"
+}
