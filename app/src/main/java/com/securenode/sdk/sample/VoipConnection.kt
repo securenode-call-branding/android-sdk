@@ -3,14 +3,15 @@ package com.securenode.sdk.sample
 import android.net.Uri
 import android.telecom.Connection
 import android.telecom.DisconnectCause
+import android.telecom.TelecomManager
 
 class VoipConnection(
     private val remote: String
 ) : Connection() {
 
     init {
-        connectionProperties = PROPERTY_SELF_MANAGED
-        address = Uri.fromParts("tel", remote, null)
+        setConnectionProperties(PROPERTY_SELF_MANAGED)
+        setAddress(Uri.fromParts("tel", remote, null), TelecomManager.PRESENTATION_ALLOWED)
         setInitializing()
         setRinging()
     }

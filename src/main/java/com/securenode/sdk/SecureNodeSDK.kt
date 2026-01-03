@@ -101,10 +101,12 @@ class SecureNodeSDK private constructor(
                 withContext(Dispatchers.IO) {
                     // Store in local database
                     response.branding.forEach { branding ->
+                        val bn = branding.brandName
+                        if (bn.isNullOrBlank()) return@forEach
                         database.brandingDao().insertBranding(
                             com.securenode.sdk.database.BrandingEntity(
                                 phoneNumberE164 = branding.phoneNumberE164,
-                                brandName = branding.brandName,
+                                brandName = bn,
                                 logoUrl = branding.logoUrl,
                                 callReason = branding.callReason,
                                 updatedAt = System.currentTimeMillis()
@@ -224,6 +226,12 @@ class SecureNodeSDK private constructor(
             Log.e(TAG, "Cleanup failed", e)
         }
     }
+
+    /**
+     * Future: Secure Voice / VoIP channel gate.
+     * This SDK build ships the surface as a stub (off by default).
+     */
+    fun isSecureVoiceEnabled(): Boolean = false
 }
 
 /**

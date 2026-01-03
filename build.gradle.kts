@@ -42,6 +42,8 @@ dependencies {
 
     // Room Database
     val roomVersion = "2.8.4"
+    // Room types are part of our public surface (BrandingDatabase extends RoomDatabase),
+    // so consumers (sample app / integrators) must see them on the compile classpath.
     api("androidx.room:room-runtime:$roomVersion")
     api("androidx.room:room-ktx:$roomVersion")
     //noinspection KaptUsageInsteadOfKsp

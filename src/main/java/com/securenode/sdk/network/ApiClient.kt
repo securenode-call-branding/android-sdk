@@ -19,6 +19,8 @@ class ApiClient(
     private val apiKey: String
 ) {
     private val client: OkHttpClient
+    private val baseRoot: String
+    private val baseApi: String
 
     init {
         val loggingInterceptor = HttpLoggingInterceptor { message ->
@@ -41,6 +43,21 @@ class ApiClient(
             .readTimeout(10, TimeUnit.SECONDS)
             .writeTimeout(10, TimeUnit.SECONDS)
             .build()
+
+        // Accept either:
+        // - https://api.securenode.io
+        // - https://api.securenode.io/api
+        // Normalize to root and always try both mounts:
+        // - {root}/mobile/...
+        // - {root}/api/mobile/...
+        val trimmed = baseUrl.trim().trimEnd('/')
+        baseRoot = if (trimmed.endsWith("/api")) trimmed.dropLast(4) else trimmed
+        baseApi = "$baseRoot/api"
+    }
+
+    private fun endpointCandidates(path: String): List<String> {
+        // path example: "mobile/branding/sync"
+        return listOf("$baseRoot/$path", "$baseApi/$path")
     }
 
     /**
@@ -48,53 +65,54 @@ class ApiClient(
      */
     suspend fun syncBranding(since: String? = null): SyncResponse = withContext(Dispatchers.IO) {
         try {
-            val url = if (since != null) {
-                "$baseUrl/mobile/branding/sync?since=$since"
-            } else {
-                "$baseUrl/mobile/branding/sync"
+            val urls = endpointCandidates("mobile/branding/sync").map { base ->
+                if (since != null) "$base?since=$since" else base
             }
 
-            val request = Request.Builder()
-                .url(url)
-                .get()
-                .build()
+            var lastCode: Int? = null
+            for (url in urls) {
+                val request = Request.Builder().url(url).get().build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string()
+                if (response.code == 404) continue
+                if (!response.isSuccessful || body == null) {
+                    lastCode = response.code
+                    continue
+                }
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string()
+                val json = JSONObject(body)
+                val brandingArray = json.getJSONArray("branding")
+                val brandingList = mutableListOf<BrandingInfo>()
 
-            if (!response.isSuccessful || body == null) {
-                throw IOException("Sync failed: ${response.code}")
-            }
-
-            val json = JSONObject(body)
-            val brandingArray = json.getJSONArray("branding")
-            val brandingList = mutableListOf<BrandingInfo>()
-
-            for (i in 0 until brandingArray.length()) {
-                val item = brandingArray.getJSONObject(i)
-                brandingList.add(
-                    BrandingInfo(
-                        phoneNumberE164 = item.getString("phone_number_e164"),
-                        brandName = item.getString("brand_name"),
-                        logoUrl = item.optString("logo_url").takeIf { it.isNotBlank() },
-                        callReason = item.optString("call_reason").takeIf { it.isNotBlank() },
-                        updatedAt = item.getString("updated_at")
+                for (i in 0 until brandingArray.length()) {
+                    val item = brandingArray.getJSONObject(i)
+                    val bn = item.optString("brand_name").takeIf { it.isNotBlank() } ?: continue
+                    brandingList.add(
+                        BrandingInfo(
+                            phoneNumberE164 = item.getString("phone_number_e164"),
+                            brandName = bn,
+                            logoUrl = item.optString("logo_url").takeIf { it.isNotBlank() },
+                            callReason = item.optString("call_reason").takeIf { it.isNotBlank() },
+                            updatedAt = item.optString("updated_at")
+                        )
                     )
+                }
+
+                return@withContext SyncResponse(
+                    branding = brandingList,
+                    syncedAt = json.optString("synced_at"),
+                    config = run {
+                        val cfg = json.optJSONObject("config")
+                        SyncConfig(
+                            voipDialerEnabled = cfg?.optBoolean("voip_dialer_enabled", false) ?: false,
+                            mode = cfg?.optString("mode")?.takeIf { it.isNotBlank() } ?: "live",
+                            brandingEnabled = cfg?.optBoolean("branding_enabled", true) ?: true
+                        )
+                    }
                 )
             }
 
-            SyncResponse(
-                branding = brandingList,
-                syncedAt = json.getString("synced_at"),
-                config = run {
-                    val cfg = json.optJSONObject("config")
-                    SyncConfig(
-                        voipDialerEnabled = cfg?.optBoolean("voip_dialer_enabled", false) ?: false,
-                        mode = cfg?.optString("mode")?.takeIf { it.isNotBlank() } ?: "live",
-                        brandingEnabled = cfg?.optBoolean("branding_enabled", true) ?: true
-                    )
-                }
-            )
+            throw IOException("Sync failed: ${lastCode ?: "unknown"}")
         } catch (e: Exception) {
             Log.e(TAG, "Sync failed", e)
             throw e
@@ -107,34 +125,29 @@ class ApiClient(
     suspend fun lookupBranding(phoneNumber: String): BrandingInfo? = withContext(Dispatchers.IO) {
         try {
             val encodedNumber = java.net.URLEncoder.encode(phoneNumber, "UTF-8")
-            val url = "$baseUrl/mobile/branding/lookup?e164=$encodedNumber"
-
-            val request = Request.Builder()
-                .url(url)
-                .get()
-                .build()
-
-            val response = client.newCall(request).execute()
-            val body = response.body?.string()
-
-            if (!response.isSuccessful || body == null) {
-                return@withContext null
+            val urls = endpointCandidates("mobile/branding/lookup").map { base ->
+                "$base?e164=$encodedNumber"
             }
 
-            val json = JSONObject(body)
-            val brandName = json.optString("brand_name").takeIf { it.isNotBlank() }
+            for (url in urls) {
+                val request = Request.Builder().url(url).get().build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string()
+                if (response.code == 404) continue
+                if (!response.isSuccessful || body == null) continue
 
-            if (brandName == null) {
-                return@withContext null
+                val json = JSONObject(body)
+                val brandName = json.optString("brand_name").takeIf { it.isNotBlank() } ?: return@withContext null
+
+                return@withContext BrandingInfo(
+                    phoneNumberE164 = json.optString("phone_number_e164").takeIf { it.isNotBlank() } ?: json.optString("e164"),
+                    brandName = brandName,
+                    logoUrl = json.optString("logo_url").takeIf { it.isNotBlank() },
+                    callReason = json.optString("call_reason").takeIf { it.isNotBlank() },
+                    updatedAt = json.optString("updated_at")
+                )
             }
-
-            BrandingInfo(
-                phoneNumberE164 = json.getString("e164"),
-                brandName = brandName,
-                logoUrl = json.optString("logo_url").takeIf { it.isNotBlank() },
-                callReason = json.optString("call_reason").takeIf { it.isNotBlank() },
-                updatedAt = ""
-            )
+            null
         } catch (e: Exception) {
             Log.e(TAG, "Lookup failed", e)
             null

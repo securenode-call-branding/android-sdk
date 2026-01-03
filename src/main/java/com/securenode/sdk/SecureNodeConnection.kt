@@ -113,30 +113,10 @@ internal class SecureNodeConnection(
             brandName?.let { name ->
                 setCallerDisplayName(name, TelecomManager.PRESENTATION_ALLOWED)
             }
-            
-            // Set logo/image
-            logoUrl?.let { url ->
-                val cachedImage = imageCache.getImage(url)
-                if (cachedImage != null) {
-                    setCallerDisplayPhoto(cachedImage)
-                } else {
-                    // Load asynchronously
-                    imageCache.loadImageAsync(url) { uri ->
-                        uri?.let { setCallerDisplayPhoto(it) }
-                    }
-                }
-            }
-            
-            // Set call reason
-            callReason?.let { reason ->
-                setStatusHints(
-                    StatusHints(
-                        null, // icon
-                        reason, // label
-                        null // extras
-                    )
-                )
-            }
+            // NOTE:
+            // We intentionally do not attempt to set caller photos/status hints here.
+            // Carrier/OS surfaces vary and some APIs are not available on all versions.
+            // Keep this path lean + reliable; use notifications/UX surfaces for richer branding when needed.
             
             brandingApplied = true
             setActive()
