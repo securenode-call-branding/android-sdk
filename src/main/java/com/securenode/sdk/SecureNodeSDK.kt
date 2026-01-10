@@ -1,14 +1,16 @@
-package com.securenode.sdk
+package com.securenode.sdk.sample
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Build
 import android.telecom.Connection
 import android.telecom.ConnectionRequest
 import android.util.Log
-import com.securenode.sdk.database.BrandingDatabase
-import com.securenode.sdk.network.ApiClient
-import com.securenode.sdk.network.BrandingInfo
-import com.securenode.sdk.network.SyncResponse
-import com.securenode.sdk.security.KeyStoreManager
+import com.securenode.sdk.sample.database.BrandingDatabase
+import com.securenode.sdk.sample.network.ApiClient
+import com.securenode.sdk.sample.network.BrandingInfo
+import com.securenode.sdk.sample.network.SyncResponse
+import com.securenode.sdk.sample.security.KeyStoreManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,14 +28,13 @@ class SecureNodeSDK private constructor(
 ) {
     private val apiClient: ApiClient
     private val database: BrandingDatabase
-    private val keyStoreManager: KeyStoreManager
+    // Initialize secure key storage
+    private val keyStoreManager: KeyStoreManager = KeyStoreManager(context)
     private val imageCache: ImageCache
     private val scope = CoroutineScope(Dispatchers.IO)
 
     init {
-        // Initialize secure key storage
-        keyStoreManager = KeyStoreManager(context)
-        
+
         // Retrieve or store API key securely
         val storedApiKey = keyStoreManager.getApiKey()
         if (storedApiKey == null && config.apiKey.isNotBlank()) {
@@ -41,8 +42,31 @@ class SecureNodeSDK private constructor(
         }
         val apiKey = storedApiKey ?: config.apiKey
         
-        // Initialize API client
-        apiClient = ApiClient(config.apiUrl, apiKey)
+        // Initialize API client (includes SecureNode client CA trust on Android)
+        apiClient = ApiClient(context, config.apiUrl, apiKey)
+
+        // Register device (best-effort; fail-open)
+        scope.launch {
+            try {
+                val pm = context.packageManager
+                val pkg = context.packageName
+                val appVersion = runCatching {
+                    val pi = pm.getPackageInfo(pkg, 0)
+                    pi.versionName ?: pi.longVersionCode.toString()
+                }.getOrNull()
+                apiClient.registerDevice(
+                    platform = "android",
+                    deviceType = Build.MODEL,
+                    osVersion = "Android ${Build.VERSION.RELEASE}",
+                    appVersion = appVersion,
+                    sdkVersion = null,
+                    customerName = null,
+                    customerAccountNumber = null
+                )
+            } catch {
+                // ignore
+            }
+        }
         
         // Initialize database
         database = BrandingDatabase.getDatabase(context)
@@ -60,6 +84,7 @@ class SecureNodeSDK private constructor(
         private const val TAG = "SecureNodeSDK"
         private const val CACHE_RETENTION_DAYS = 30L
         
+        @SuppressLint("StaticFieldLeak")
         @Volatile
         private var INSTANCE: SecureNodeSDK? = null
 
@@ -104,7 +129,7 @@ class SecureNodeSDK private constructor(
                         val bn = branding.brandName
                         if (bn.isNullOrBlank()) return@forEach
                         database.brandingDao().insertBranding(
-                            com.securenode.sdk.database.BrandingEntity(
+                            com.securenode.sdk.sample.database.BrandingEntity(
                                 phoneNumberE164 = branding.phoneNumberE164,
                                 brandName = bn,
                                 logoUrl = branding.logoUrl,
@@ -129,6 +154,29 @@ class SecureNodeSDK private constructor(
                     callback(Result.failure(e))
                 }
             }
+        }
+    }
+
+    /**
+     * Java-friendly sync callback shape.
+     *
+     * Kotlin's `Result<T>` is awkward from Java (extension helpers like `isSuccess()` are not callable),
+     * so this provides an explicit `(response, error)` contract for Java callers.
+     */
+    fun interface SyncBrandingCallback {
+        fun onResult(response: SyncResponse?, error: Throwable?)
+    }
+
+    @JvmOverloads
+    fun syncBrandingJava(
+        since: String? = null,
+        callback: SyncBrandingCallback
+    ) {
+        syncBranding(since) { result ->
+            result.fold(
+                onSuccess = { callback.onResult(it, null) },
+                onFailure = { callback.onResult(null, it) }
+            )
         }
     }
 
@@ -162,10 +210,10 @@ class SecureNodeSDK private constructor(
                 
                 // Fallback to API lookup
                 val branding = apiClient.lookupBranding(phoneNumber)
-                if (branding != null && branding.brandName != null) {
+                if (branding?.brandName != null) {
                     // Cache for next time
                     database.brandingDao().insertBranding(
-                        com.securenode.sdk.database.BrandingEntity(
+                        com.securenode.sdk.sample.database.BrandingEntity(
                             phoneNumberE164 = branding.phoneNumberE164,
                             brandName = branding.brandName,
                             logoUrl = branding.logoUrl,
@@ -239,6 +287,6 @@ class SecureNodeSDK private constructor(
  */
 data class SecureNodeConfig(
     val apiUrl: String,
-    val apiKey: String = ""
+    val apiKey: String = "sn_live_de23756e5c16bcd94f763f5a8320ccb2"
 )
 

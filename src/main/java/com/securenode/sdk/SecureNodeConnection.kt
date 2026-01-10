@@ -1,15 +1,16 @@
-package com.securenode.sdk
+package com.securenode.sdk.sample
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.telecom.Connection
 import android.telecom.ConnectionRequest
 import android.telecom.StatusHints
 import android.telecom.TelecomManager
 import android.util.Log
-import com.securenode.sdk.database.BrandingDatabase
-import com.securenode.sdk.network.ApiClient
-import com.securenode.sdk.network.BrandingInfo
+import com.securenode.sdk.sample.database.BrandingDatabase
+import com.securenode.sdk.sample.network.ApiClient
+import com.securenode.sdk.sample.network.BrandingInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,7 +34,9 @@ internal class SecureNodeConnection(
     private var brandingApplied = false
 
     init {
-        setConnectionProperties(Connection.PROPERTY_SELF_MANAGED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+            setConnectionProperties(Connection.PROPERTY_SELF_MANAGED)
+        }
         setAudioModeIsVoip(true)
         
         // Lookup and apply branding
@@ -55,6 +58,7 @@ internal class SecureNodeConnection(
                 if (cached != null) {
                     withContext(Dispatchers.Main) {
                         applyBranding(
+                            phoneNumberE164 = phoneNumber,
                             brandName = cached.brandName,
                             logoUrl = cached.logoUrl,
                             callReason = cached.callReason
@@ -65,20 +69,23 @@ internal class SecureNodeConnection(
                 
                 // Fallback to API lookup
                 val branding = apiClient.lookupBranding(phoneNumber)
-                if (branding != null && branding.brandName != null) {
+                if (branding?.brandName != null) {
                     // Cache for next time
-                    database.brandingDao().insertBranding(
-                        com.securenode.sdk.database.BrandingEntity(
-                            phoneNumberE164 = branding.phoneNumberE164,
-                            brandName = branding.brandName,
-                            logoUrl = branding.logoUrl,
-                            callReason = branding.callReason,
-                            updatedAt = System.currentTimeMillis()
-                        )
-                    )
-                    
+                    database.run {
+                        brandingDao().insertBranding(
+                                        com.securenode.sdk.sample.database.BrandingEntity(
+                                            phoneNumberE164 = branding.phoneNumberE164,
+                                            brandName = branding.brandName,
+                                            logoUrl = branding.logoUrl,
+                                            callReason = branding.callReason,
+                                            updatedAt = System.currentTimeMillis()
+                                        )
+                                    )
+                    }
+
                     withContext(Dispatchers.Main) {
                         applyBranding(
+                            phoneNumberE164 = phoneNumber,
                             brandName = branding.brandName,
                             logoUrl = branding.logoUrl,
                             callReason = branding.callReason
@@ -102,6 +109,7 @@ internal class SecureNodeConnection(
      * Apply branding to the connection
      */
     private fun applyBranding(
+        phoneNumberE164: String,
         brandName: String?,
         logoUrl: String?,
         callReason: String?
@@ -120,6 +128,17 @@ internal class SecureNodeConnection(
             
             brandingApplied = true
             setActive()
+
+            // Best-effort: record imprint for portal activity sparklines (never blocks call UX)
+            if (!brandName.isNullOrBlank()) {
+                scope.launch {
+                    try {
+                        apiClient.recordImprint(phoneNumberE164)
+                    } catch {
+                        // ignore
+                    }
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply branding", e)
             setActive()
