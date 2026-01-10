@@ -173,7 +173,13 @@ class ApiClient(
         try {
             val encodedNumber = java.net.URLEncoder.encode(phoneNumber, "UTF-8")
             val urls = endpointCandidates("mobile/branding/lookup").map { base ->
-                "$base?e164=$encodedNumber"
+                withQuery(
+                    base,
+                    mapOf(
+                        "e164" to encodedNumber,
+                        "device_id" to deviceIdOrNull()
+                    )
+                )
             }
 
             for (url in urls) {
