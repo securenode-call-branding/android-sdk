@@ -1,0 +1,2 @@
+-keep class io.securenode.branding.** { *; }
+-keep class kotlinx.serialization.** { *; }
