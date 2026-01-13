@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "io.securenode.branding.sample"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "io.securenode.branding.sample"
         minSdk = 23
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
     }
