@@ -15,7 +15,7 @@ data class SecureNodeConfig(
      *
      * Requires host app to request/grant READ_CONTACTS + WRITE_CONTACTS at runtime.
      */
-    val enableContactsBranding: Boolean = false,
+    val enableContactsBranding: Boolean = true,
 
     /**
      * Optional: also write brand logo photos into the SecureNode-managed Contacts.
@@ -24,7 +24,7 @@ data class SecureNodeConfig(
      * - Best-effort (network/OEM/contacts provider may fail).
      * - Only applies to SecureNode-managed contacts created by the SDK.
      */
-    val enableContactsBrandingPhotos: Boolean = false,
+    val enableContactsBrandingPhotos: Boolean = true,
 
     /**
      * To avoid OEM dialer quirks and contact bloat, we split a brand into multiple contacts when it
