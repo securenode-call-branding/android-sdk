@@ -1,4 +1,5 @@
 plugins {
+    // Versions are defined centrally in settings.gradle.kts (pluginManagement) to avoid mismatch across modules.
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
@@ -8,7 +9,7 @@ plugins {
 
 android {
     namespace = "io.securenode.branding"
-    compileSdk = 36
+    compileSdk = 35
 
     buildFeatures {
         buildConfig = true
