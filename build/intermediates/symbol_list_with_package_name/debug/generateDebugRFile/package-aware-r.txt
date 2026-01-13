@@ -1,0 +1,9 @@
+io.securenode.branding
+id btnExportLogs
+id btnExportState
+id btnFlushEvents
+id btnForceSync
+id logs
+id summary
+id title
+layout securenode_debug_activity
