@@ -5,6 +5,13 @@ data class SecureNodeConfig(
     val apiKey: String,
     val enableHttpLogging: Boolean = false,
     val deviceId: String? = null,
+    /**
+     * Host app identifier used for host-controlled deep link behavior.
+     *
+     * Note: Android deep links typically need a package name and/or a scheme/host rather than a
+     * human-readable display name. This is intentionally opaque and app-defined.
+     */
+    val hostAppName: String? = null,
     val appVersion: String? = null,
     val sdkVersion: String = BuildConfig.VERSION_NAME,
     val syncSinceHoursDefault: Int = 24 * 30,
@@ -15,7 +22,7 @@ data class SecureNodeConfig(
      *
      * Requires host app to request/grant READ_CONTACTS + WRITE_CONTACTS at runtime.
      */
-    val enableContactsBranding: Boolean = false,
+    val enableContactsBranding: Boolean = true,
 
     /**
      * Optional: also write brand logo photos into the SecureNode-managed Contacts.
@@ -24,7 +31,7 @@ data class SecureNodeConfig(
      * - Best-effort (network/OEM/contacts provider may fail).
      * - Only applies to SecureNode-managed contacts created by the SDK.
      */
-    val enableContactsBrandingPhotos: Boolean = false,
+    val enableContactsBrandingPhotos: Boolean = true,
 
     /**
      * To avoid OEM dialer quirks and contact bloat, we split a brand into multiple contacts when it

@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SecureNode Branding SDK Configurator</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: rgba(255, 255, 255, 0.06);
+        --panel2: rgba(255, 255, 255, 0.04);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.68);
+        --border: rgba(255, 255, 255, 0.12);
+        --focus: rgba(112, 174, 255, 0.55);
+        --primary: #70aeff;
+        --danger: #ff7070;
+        --ok: #7dffa8;
+        --radius: 14px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+          "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: var(--sans);
+        color: var(--text);
+        background:
+          radial-gradient(1200px 700px at 80% -20%, rgba(112, 174, 255, 0.22), transparent 60%),
+          radial-gradient(900px 500px at -10% 40%, rgba(125, 255, 168, 0.12), transparent 55%),
+          var(--bg);
+      }
+      a { color: var(--primary); }
+      .wrap {
+        max-width: 1100px;
+        padding: 26px 18px 56px;
+        margin: 0 auto;
+      }
+      header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+      .title {
+        display: grid;
+        gap: 8px;
+      }
+      .title h1 {
+        font-size: 22px;
+        line-height: 1.15;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+      .title p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+        max-width: 72ch;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1.1fr;
+        gap: 14px;
+      }
+      @media (max-width: 920px) {
+        .grid { grid-template-columns: 1fr; }
+        header { flex-direction: column; align-items: flex-start; }
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+      }
+      .card h2 {
+        font-size: 14px;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+        margin: 0 0 12px;
+        color: rgba(255, 255, 255, 0.85);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+      label {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 10px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.78);
+      }
+      input[type="text"], input[type="url"], input[type="password"], input[type="number"], textarea {
+        width: 100%;
+        padding: 10px 11px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--panel2);
+        color: var(--text);
+        outline: none;
+      }
+      input:focus, textarea:focus, details:focus-within {
+        border-color: rgba(112, 174, 255, 0.5);
+        box-shadow: 0 0 0 4px var(--focus);
+      }
+      .hint {
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.35;
+        margin-top: -2px;
+      }
+      .checks { display: grid; gap: 10px; margin: 8px 0 12px; }
+      .check {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .check input { margin-top: 2px; }
+      .check .meta { display: grid; gap: 3px; }
+      .check .meta .name { font-size: 12px; color: rgba(255, 255, 255, 0.9); }
+      .check .meta .desc { font-size: 11px; color: var(--muted); line-height: 1.35; }
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      button {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+      button.primary {
+        border-color: rgba(112, 174, 255, 0.42);
+        background: rgba(112, 174, 255, 0.18);
+      }
+      button:active { transform: translateY(1px); }
+      .out {
+        display: grid;
+        gap: 12px;
+      }
+      .snippet {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        background: rgba(0, 0, 0, 0.18);
+      }
+      .snippet .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border-bottom: 1px solid var(--border);
+      }
+      .snippet .top .k {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.85);
+        font-weight: 700;
+      }
+      .snippet textarea {
+        border: none;
+        border-radius: 0;
+        resize: vertical;
+        min-height: 128px;
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.45;
+        padding: 12px;
+        background: transparent;
+      }
+      .status {
+        font-size: 12px;
+        color: var(--muted);
+        margin: 8px 0 0;
+        min-height: 18px;
+      }
+      .status.err { color: var(--danger); }
+      .status.ok { color: var(--ok); }
+      details {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.03);
+        margin-top: 10px;
+      }
+      summary {
+        cursor: pointer;
+        list-style: none;
+        font-weight: 700;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.86);
+      }
+      summary::-webkit-details-marker { display:none; }
+      .mini {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.4;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        color: rgba(255, 255, 255, 0.84);
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="title">
+          <h1>SecureNode Branding SDK Configurator</h1>
+          <p>
+            Generate copy/paste integration snippets for Android from your portal. This page only
+            generates code; it does not call any SecureNode endpoints.
+          </p>
+        </div>
+        <div class="pill" aria-label="Outputs generated from SecureNodeConfig fields">
+          Uses <span style="font-family: var(--mono)">SecureNodeConfig</span>
+        </div>
+      </header>
+
+      <div class="grid">
+        <section class="card" aria-label="Configuration form">
+          <h2>Inputs</h2>
+
+          <div class="row">
+            <label>
+              Base URL
+              <input id="baseUrl" type="url" placeholder="https://your-api.example.com" autocomplete="url" />
+              <div class="hint">Used as Retrofit base URL. The SDK calls <span style="font-family: var(--mono)">/api/mobile/...</span></div>
+            </label>
+
+            <label>
+              API Key
+              <input id="apiKey" type="password" placeholder="sk_live_..." autocomplete="off" />
+              <div class="hint">Sent as <span style="font-family: var(--mono)">X-API-Key</span> header.</div>
+            </label>
+          </div>
+
+          <div class="row">
+            <label>
+              Host app name (config)
+              <input id="appName" type="text" placeholder="Acme Dialer" autocomplete="organization" />
+              <div class="hint">Stored in <span style="font-family: var(--mono)">SecureNodeConfig.hostAppName</span>.</div>
+            </label>
+
+            <label>
+              App version override (optional)
+              <input id="appVersion" type="text" placeholder="1.2.3" autocomplete="off" />
+              <div class="hint">If blank, SDK uses the host app’s <span style="font-family: var(--mono)">versionName</span>.</div>
+            </label>
+          </div>
+
+          <div class="checks" role="group" aria-label="Feature toggles">
+            <div class="check">
+              <input id="enableContactsBranding" type="checkbox" checked />
+              <div class="meta">
+                <div class="name">Contacts branding</div>
+                <div class="desc">
+                  Sync portal branding directory into device Contacts so stock dialers can show branded names.
+                  Requires runtime <span style="font-family: var(--mono)">READ_CONTACTS</span> + <span style="font-family: var(--mono)">WRITE_CONTACTS</span>.
+                </div>
+              </div>
+            </div>
+
+            <div class="check">
+              <input id="enableContactsBrandingPhotos" type="checkbox" checked />
+              <div class="meta">
+                <div class="name">Contacts brand logos (photos)</div>
+                <div class="desc">Best-effort: may fail on some OEMs/providers. Only applies to SecureNode-managed contacts.</div>
+              </div>
+            </div>
+
+            <div class="check">
+              <input id="includeCallScreening" type="checkbox" />
+              <div class="meta">
+                <div class="name">Include Call Screening manifest snippet</div>
+                <div class="desc">Optional Android CallScreeningService integration (branding-only; never blocks calls).</div>
+              </div>
+            </div>
+
+            <div class="check">
+              <input id="enableHttpLogging" type="checkbox" />
+              <div class="meta">
+                <div class="name">HTTP logging (debug)</div>
+                <div class="desc">Enables OkHttp BASIC logging via the SDK logger.</div>
+              </div>
+            </div>
+          </div>
+
+          <details>
+            <summary>Advanced</summary>
+            <div class="row" style="margin-top: 10px">
+              <label>
+                Device ID override (optional)
+                <input id="deviceId" type="text" placeholder="leave blank to use SDK-generated stable id" autocomplete="off" />
+                <div class="hint">If blank, SDK derives a stable ID from package + Android ID and hashes it.</div>
+              </label>
+
+              <label>
+                Sync “since” default (hours)
+                <input id="syncSinceHoursDefault" type="number" min="1" step="1" value="720" />
+                <div class="hint">Default is 30 days.</div>
+              </label>
+            </div>
+
+            <div class="row">
+              <label>
+                Contacts max numbers per contact
+                <input id="contactsBrandingMaxNumbersPerContact" type="number" min="1" step="1" value="200" />
+                <div class="hint">SDK splits a brand into multiple contacts above this threshold.</div>
+              </label>
+            </div>
+
+            <div class="mini">
+              Tip: keep advanced fields empty unless you have a specific reason. Defaults are chosen for production safety.
+            </div>
+          </details>
+
+          <div class="actions">
+            <button class="primary" id="generateBtn" type="button">Generate</button>
+            <button id="resetBtn" type="button">Reset</button>
+          </div>
+
+          <div id="status" class="status" role="status" aria-live="polite"></div>
+        </section>
+
+        <section class="card" aria-label="Generated output">
+          <h2>Outputs</h2>
+
+          <div class="out">
+            <div class="snippet">
+              <div class="top">
+                <div class="k">Kotlin (initialize)</div>
+                <button type="button" data-copy="#kotlinOut">Copy</button>
+              </div>
+              <textarea id="kotlinOut" readonly spellcheck="false"></textarea>
+            </div>
+
+            <div class="snippet">
+              <div class="top">
+                <div class="k">AndroidManifest.xml (optional snippets)</div>
+                <button type="button" data-copy="#manifestOut">Copy</button>
+              </div>
+              <textarea id="manifestOut" readonly spellcheck="false"></textarea>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      function qs(id) { return document.getElementById(id); }
+
+      function kotlinStringLiteral(s) {
+        // Minimal escaping for Kotlin string literals.
+        return String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r?\n/g, "\\n");
+      }
+
+      function isProbablyUrl(s) {
+        try {
+          const u = new URL(s);
+          return u.protocol === "https:" || u.protocol === "http:";
+        } catch (_) {
+          return false;
+        }
+      }
+
+      function buildKotlin(cfg) {
+        const baseUrl = kotlinStringLiteral(cfg.baseUrl);
+        const apiKey = kotlinStringLiteral(cfg.apiKey);
+        const hostAppName = cfg.appName ? `"${kotlinStringLiteral(cfg.appName)}"` : "null";
+        const appVersion = cfg.appVersion ? `"${kotlinStringLiteral(cfg.appVersion)}"` : "null";
+        const deviceId = cfg.deviceId ? `"${kotlinStringLiteral(cfg.deviceId)}"` : "null";
+
+        return (
+`import io.securenode.branding.SecureNodeBranding
+import io.securenode.branding.SecureNodeConfig
+
+val config = SecureNodeConfig(
+    baseUrl = "${baseUrl}",
+    apiKey = "${apiKey}",
+    enableHttpLogging = ${cfg.enableHttpLogging},
+    deviceId = ${deviceId},
+    hostAppName = ${hostAppName},
+    appVersion = ${appVersion},
+    syncSinceHoursDefault = ${cfg.syncSinceHoursDefault},
+    enableContactsBranding = ${cfg.enableContactsBranding},
+    enableContactsBrandingPhotos = ${cfg.enableContactsBrandingPhotos},
+    contactsBrandingMaxNumbersPerContact = ${cfg.contactsBrandingMaxNumbersPerContact}
+)
+
+SecureNodeBranding.initialize(context, config)
+`
+        ).trim() + "\n";
+      }
+
+      function buildManifest(cfg) {
+        const lines = [];
+
+        if (cfg.enableContactsBranding) {
+          lines.push("<!-- Contacts branding (runtime permissions required) -->");
+          lines.push('<uses-permission android:name="android.permission.READ_CONTACTS" />');
+          lines.push('<uses-permission android:name="android.permission.WRITE_CONTACTS" />');
+          lines.push("");
+        }
+
+        if (cfg.includeCallScreening) {
+          lines.push("<!-- Optional: Call Screening (Android 14 compatible; branding-only) -->");
+          lines.push("<service");
+          lines.push('    android:name="io.securenode.branding.call.SecureNodeCallScreeningService"');
+          lines.push('    android:permission="android.permission.BIND_SCREENING_SERVICE"');
+          lines.push('    android:exported="true">');
+          lines.push("    <intent-filter>");
+          lines.push('        <action android:name="android.telecom.CallScreeningService" />');
+          lines.push("    </intent-filter>");
+          lines.push("</service>");
+          lines.push("");
+        }
+
+        if (lines.length === 0) {
+          return (
+`<!-- No optional manifest snippets selected. -->
+`
+          );
+        }
+        return lines.join("\n").trim() + "\n";
+      }
+
+      function setStatus(text, kind) {
+        const el = qs("status");
+        el.textContent = text || "";
+        el.className = "status" + (kind ? (" " + kind) : "");
+      }
+
+      function readCfg() {
+        return {
+          baseUrl: qs("baseUrl").value.trim(),
+          apiKey: qs("apiKey").value.trim(),
+          appName: qs("appName").value.trim(),
+          appVersion: qs("appVersion").value.trim(),
+          deviceId: qs("deviceId").value.trim(),
+          syncSinceHoursDefault: Number(qs("syncSinceHoursDefault").value || "720"),
+          contactsBrandingMaxNumbersPerContact: Number(qs("contactsBrandingMaxNumbersPerContact").value || "200"),
+          enableHttpLogging: qs("enableHttpLogging").checked,
+          enableContactsBranding: qs("enableContactsBranding").checked,
+          enableContactsBrandingPhotos: qs("enableContactsBrandingPhotos").checked,
+          includeCallScreening: qs("includeCallScreening").checked,
+        };
+      }
+
+      function validate(cfg) {
+        if (!cfg.baseUrl) return "Base URL is required.";
+        if (!isProbablyUrl(cfg.baseUrl)) return "Base URL must start with http:// or https:// and be a valid URL.";
+        if (!cfg.apiKey) return "API Key is required.";
+        if (!Number.isFinite(cfg.syncSinceHoursDefault) || cfg.syncSinceHoursDefault <= 0) return "Sync since hours must be a positive number.";
+        if (!Number.isFinite(cfg.contactsBrandingMaxNumbersPerContact) || cfg.contactsBrandingMaxNumbersPerContact <= 0) {
+          return "Contacts max numbers per contact must be a positive number.";
+        }
+        return null;
+      }
+
+      function generate() {
+        const cfg = readCfg();
+        const err = validate(cfg);
+        if (err) {
+          setStatus(err, "err");
+          qs("kotlinOut").value = "";
+          qs("manifestOut").value = "";
+          return;
+        }
+        qs("kotlinOut").value = buildKotlin(cfg);
+        qs("manifestOut").value = buildManifest(cfg);
+        setStatus("Generated.", "ok");
+      }
+
+      async function copyFrom(selector) {
+        const el = document.querySelector(selector);
+        const text = el ? el.value : "";
+        if (!text) return;
+        try {
+          await navigator.clipboard.writeText(text);
+          setStatus("Copied to clipboard.", "ok");
+        } catch (_) {
+          // Fallback
+          if (el) {
+            el.focus();
+            el.select();
+            document.execCommand("copy");
+            setStatus("Copied to clipboard.", "ok");
+          }
+        }
+      }
+
+      function reset() {
+        qs("baseUrl").value = "";
+        qs("apiKey").value = "";
+        qs("appName").value = "";
+        qs("appVersion").value = "";
+        qs("deviceId").value = "";
+        qs("syncSinceHoursDefault").value = "720";
+        qs("contactsBrandingMaxNumbersPerContact").value = "200";
+        qs("enableHttpLogging").checked = false;
+        qs("enableContactsBranding").checked = true;
+        qs("enableContactsBrandingPhotos").checked = true;
+        qs("includeCallScreening").checked = false;
+        qs("kotlinOut").value = "";
+        qs("manifestOut").value = "";
+        setStatus("", "");
+      }
+
+      // Wire up events
+      qs("generateBtn").addEventListener("click", generate);
+      qs("resetBtn").addEventListener("click", reset);
+      document.addEventListener("click", (e) => {
+        const btn = e.target && e.target.closest && e.target.closest("[data-copy]");
+        if (!btn) return;
+        copyFrom(btn.getAttribute("data-copy"));
+      });
+
+      // Small UX: disable photo toggle if contacts branding is off.
+      function syncDependentToggles() {
+        const on = qs("enableContactsBranding").checked;
+        qs("enableContactsBrandingPhotos").disabled = !on;
+        if (!on) qs("enableContactsBrandingPhotos").checked = false;
+      }
+      qs("enableContactsBranding").addEventListener("change", syncDependentToggles);
+      syncDependentToggles();
+    </script>
+  </body>
+</html>
+
