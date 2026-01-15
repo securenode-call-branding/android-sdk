@@ -3,25 +3,24 @@ package io.securenode.branding.sync
 import android.content.Context
 import androidx.work.*
 import io.securenode.branding.SecureNodeBranding
+import io.securenode.branding.Iso8601
 import io.securenode.branding.telemetry.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
 class BrandingSyncWorker(appContext: Context, params: WorkerParameters) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
+            val repo = SecureNodeBranding.tryRepo() ?: SecureNodeBranding.bootstrapForWork(applicationContext)
             val cfg = SecureNodeBranding.tryConfig()
-            val repo = SecureNodeBranding.tryRepo()
             if (cfg == null || repo == null) {
-                Logger.w("Branding sync skipped: SDK not initialized")
-                return@withContext Result.failure()
+                Logger.w("Branding sync skipped: SDK not initialized (or config missing)")
+                return@withContext Result.retry()
             }
 
-            val since = Instant.now().minus(cfg.syncSinceHoursDefault.toLong(), ChronoUnit.HOURS)
-            val resp = repo.syncBrandingBestEffort(since.toString())
+            val sinceEpochMs = System.currentTimeMillis() - (cfg.syncSinceHoursDefault.toLong() * 60L * 60L * 1000L)
+            val resp = repo.syncBrandingBestEffort(Iso8601.formatUtcIso(sinceEpochMs))
             // Optional: sync portal directory into Contacts (requires permissions + explicit config flag).
             if (cfg.enableContactsBranding) {
                 repo.syncContactsBrandingBestEffort(resp.branding)
@@ -39,13 +38,13 @@ class BrandingSyncWorker(appContext: Context, params: WorkerParameters) : Corout
 
         fun oneTimeRequest(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<BrandingSyncWorker>()
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).setRequiresBatteryNotLow(true).build())
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
 
         fun periodicRequest(): PeriodicWorkRequest =
             PeriodicWorkRequestBuilder<BrandingSyncWorker>(24, TimeUnit.HOURS)
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).setRequiresBatteryNotLow(true).build())
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
     }
