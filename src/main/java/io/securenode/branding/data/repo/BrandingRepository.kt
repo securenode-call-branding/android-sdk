@@ -3,10 +3,10 @@ package io.securenode.branding.data.repo
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
-import androidx.annotation.RequiresApi
 import io.securenode.branding.BrandingResult
 import io.securenode.branding.SecureNodeConfig
 import io.securenode.branding.SecureNodeError
+import io.securenode.branding.Iso8601
 import io.securenode.branding.contacts.ContactsBrandingSync
 import io.securenode.branding.data.db.AppDatabase
 import io.securenode.branding.data.db.entity.BrandingEntity
@@ -39,8 +39,6 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import org.json.JSONObject
 import java.security.MessageDigest
-import java.time.Instant
-import java.time.format.DateTimeFormatter
 
 class BrandingRepository private constructor(
     private val context: Context,
@@ -85,7 +83,7 @@ class BrandingRepository private constructor(
                             contactsEnabled = config.enableContactsBranding && contactsPermitted,
                             contactsPhotosEnabled = config.enableContactsBrandingPhotos && contactsPermitted
                         ),
-                        lastSeen = DateTimeFormatter.ISO_INSTANT.format(Instant.now())
+                        lastSeen = Iso8601.nowUtcIso()
                     )
                 )
             } catch (t: Throwable) {
@@ -215,7 +213,7 @@ class BrandingRepository private constructor(
                         contactsPhotosEnabled = config.enableContactsBrandingPhotos && contactsPermitted,
                         backgroundRefresh = true
                     ),
-                    lastSeen = DateTimeFormatter.ISO_INSTANT.format(Instant.now())
+                    lastSeen = Iso8601.nowUtcIso()
                 )
             )
         } catch (_: Throwable) {}
@@ -233,7 +231,7 @@ class BrandingRepository private constructor(
         val expiresAtIso = (o["expires_at"] as? JsonPrimitive)?.contentOrNull
         val expiresEpoch = try {
             if (expiresAtIso.isNullOrBlank()) null
-            else Instant.parse(expiresAtIso).toEpochMilli()
+            else Iso8601.parseUtcIsoToEpochMs(expiresAtIso)
         } catch (_: Throwable) {
             null
         }
@@ -279,7 +277,6 @@ class BrandingRepository private constructor(
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     suspend fun uploadPendingEvents(batchSize: Int = 50): Int = withContext(Dispatchers.IO) {
         val pending = db.eventDao().pending(batchSize)
         var uploadedCount = 0
@@ -293,9 +290,7 @@ class BrandingRepository private constructor(
                         outcome = evt.outcome,
                         surface = evt.surface,
                         deviceId = deviceId,
-                        displayedAt = DateTimeFormatter.ISO_INSTANT.format(
-                            Instant.ofEpochMilli(evt.displayedAtEpochMs ?: evt.createdAtEpochMs)
-                        ),
+                        displayedAt = Iso8601.formatUtcIso(evt.displayedAtEpochMs ?: evt.createdAtEpochMs),
                         idempotencyKey = evt.idempotencyKey,
                         eventKey = evt.idempotencyKey,
                         meta = parseMetaJson(evt.metaJson)

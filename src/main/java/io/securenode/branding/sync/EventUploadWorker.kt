@@ -12,10 +12,10 @@ import java.util.concurrent.TimeUnit
 class EventUploadWorker(appContext: Context, params: WorkerParameters) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
-            val repo = SecureNodeBranding.tryRepo()
+            val repo = SecureNodeBranding.tryRepo() ?: SecureNodeBranding.bootstrapForWork(applicationContext)
             if (repo == null) {
-                Logger.w("Event upload skipped: SDK not initialized")
-                return@withContext Result.failure()
+                Logger.w("Event upload skipped: SDK not initialized (or config missing)")
+                return@withContext Result.retry()
             }
 
             val uploaded = repo.uploadPendingEvents(50)
@@ -34,13 +34,14 @@ class EventUploadWorker(appContext: Context, params: WorkerParameters) : Corouti
 
         fun oneTimeRequest(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<EventUploadWorker>()
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).setRequiresBatteryNotLow(true).build())
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
 
         fun periodicRequest(): PeriodicWorkRequest =
             PeriodicWorkRequestBuilder<EventUploadWorker>(15, TimeUnit.MINUTES)
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).setRequiresBatteryNotLow(true).build())
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
     }

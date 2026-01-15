@@ -1,7 +1,10 @@
 package io.securenode.branding.call
 
+import android.annotation.TargetApi
 import android.telecom.Call
 import android.telecom.CallScreeningService
+import android.os.Build
+import androidx.annotation.RequiresApi
 import io.securenode.branding.SecureNodeBranding
 import io.securenode.branding.telemetry.Logger
 import io.securenode.branding.util.PhoneNumberUtil
@@ -16,6 +19,8 @@ import kotlinx.coroutines.launch
  *
  * Host app must declare this service and user must enable the host app as the call screening app.
  */
+@TargetApi(Build.VERSION_CODES.N)
+@RequiresApi(Build.VERSION_CODES.N)
 class SecureNodeCallScreeningService : CallScreeningService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -24,7 +29,7 @@ class SecureNodeCallScreeningService : CallScreeningService() {
         respondToCall(callDetails, CallResponse.Builder().build())
 
         val raw = callDetails.handle?.schemeSpecificPart
-            val phoneAccountId = callDetails.accountHandle?.id
+        val phoneAccountId = callDetails.accountHandle?.id
         val e164 = PhoneNumberUtil.normalizeToE164(raw) ?: return
 
         scope.launch {
