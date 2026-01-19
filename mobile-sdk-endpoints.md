@@ -1,73 +1,55 @@
-{
-  "title": "Mobile SDK Endpoint Contract",
-  "path": "guides/mobile-sdk-endpoints"
-}
+# SecureNode Mobile SDK — Endpoint Contract (Authoritative)
 
+This document defines the **authoritative runtime contract** for SecureNode Mobile SDKs  
+(**iOS and Android**).
 
-# Mobile SDK Endpoint Contract
+It specifies:
 
-## Purpose & Non-Goals
-## Base URL & Authentication
-## Data Model (Branding Record)
-## Local Storage & Atomicity Rules
-## Sync Endpoint
-## Lookup Endpoint (Fallback)
-## Usage & Billing Events
-## Device Registration & Updates
-## Debug & Telemetry Gates
-## SDK Runtime Flow (Boot / Ring-Time / Background)
-## Error Handling & Retry Semantics
-## What MUST Never Block Call UI
-# Mobile SDK Endpoint Contract
+- which endpoints exist
+- when each endpoint is called
+- what data must be cached locally
+- how identity is applied at ring-time
+- how usage is reported safely for billing
 
-This document defines the **authoritative runtime contract** for SecureNode Mobile SDKs (iOS & Android).
+> **Hard rule**  
+> Caller identity must work **offline at ring-time**.  
+> Network calls must **never** be required to render the OS call UI.
 
-It describes **what endpoints exist**, **when they are called**, **what must be cached locally**, and **how billing / usage events are triggered safely** without ever blocking the operating system call UI.
-
-> This document is SDK-agnostic. Platform-specific details live in:
->
-> * `/docs/sdk/ios.mdx`
-> * `/docs/sdk/android.mdx`
+Platform-specific implementation details live in:
+- `/docs/sdk/ios.md`
+- `/docs/sdk/android.md`
 
 ---
 
-## 1. Purpose & Non‑Goals
+## 1. Purpose & Non-Goals
 
 ### Purpose
+- Guarantee **instant caller identity resolution** (<10ms lookup)
+- Preserve **native OS dialler ownership**
+- Enable **accurate, auditable billing**
+- Provide a **single integration contract** across platforms
 
-* Guarantee **instant caller identity resolution** at ring-time (offline-first)
-* Ensure **correct, auditable billing** based on real user-visible displays
-* Provide a **single integration contract** for all mobile SDK implementations
-
-### Non‑Goals
-
-* This document does **not** describe UI rendering
-* This document does **not** replace `openapi.yaml`
-* This document does **not** contain platform permission walkthroughs
+### Non-Goals
+This document does **not**:
+- Define UI rendering
+- Replace OpenAPI specifications
+- Describe permission request UX
+- Describe VoIP or dialler replacement flows
 
 ---
 
 ## 2. Base URL & Authentication
 
 ### Base URL
-
-All Mobile SDK traffic targets the SecureNode Mobile API:
-
 ```
-https://edge.securenode.io
+https://api.securenode.io
 ```
-
-> All documentation, SDKs, and OpenAPI definitions MUST reference the same base URL.
 
 ### Authentication
-
-Every request must include:
-
+Every request **must** include:
 ```
 X-API-Key: <customer-issued-api-key>
 ```
-
-The API key uniquely identifies the customer account, billing context, and branding dataset.
 
 ---
 
@@ -75,80 +57,43 @@ The API key uniquely identifies the customer account, billing context, and brand
 
 ### Branding Record (Authoritative)
 
-Each branding record represents **one active branded caller identity**.
-
-Minimum required fields:
-
-* `phone_number_e164` – lookup key (string)
-* `brand_name` – display label (string)
-* `brand_id` – internal identifier (string)
-* `updated_at` – last update timestamp (ISO8601)
+Required fields:
+- `phone_number_e164`
+- `brand_name`
+- `brand_id`
+- `updated_at`
+- `is_active`
 
 Optional fields:
+- `logo_url`
+- `call_reason`
 
-* `logo_url`
-* `call_reason`
-
-### SDK Storage Rules
-
-* Records MUST be stored locally
-* Lookups MUST be local at ring-time
-* Network calls MUST NOT be required to display identity
-
-> iOS SDKs MUST use atomic snapshot replacement. Android SDKs MUST use an equivalent transactional mechanism.
+**Storage rules**
+- Records must be stored locally
+- Ring-time lookups must be local
+- Network calls must never be required to display identity
 
 ---
 
 ## 4. Local Storage & Atomicity
 
-### Requirements
-
-* Partial writes are **never allowed**
-* A sync either completes fully or not at all
-* The SDK must always have a valid, readable dataset
-
-### Recommended Pattern
-
-* Write new dataset to a temporary table / file
-* Validate record integrity
-* Swap pointer / transaction commit
-* Clean up obsolete assets (e.g. logos)
+- Partial writes are never allowed
+- Syncs must be atomic
+- SDK must always have a readable dataset
 
 ---
 
-## 5. Sync Endpoint (Primary)
+## 5. Branding Sync
 
 ### `GET /api/mobile/branding/sync`
 
-Fetches the **authoritative active branding dataset** for the API key.
+Primary endpoint for branding data.
 
-#### Query Parameters
+Supports:
+- Full sync
+- Incremental sync via `since` cursor
 
-| Name        | Required | Description                       |
-| ----------- | -------- | --------------------------------- |
-| `since`     | No       | Incremental sync cursor (ISO8601) |
-| `device_id` | No       | Device attribution                |
-
-#### Response
-
-* `branding[]` – active branding records
-* `synced_at` – server timestamp
-* `config` – runtime flags & limits
-
-Important config fields:
-
-* `branding_enabled`
-* `account_status`
-* `cap_this_month`
-* `used_this_month`
-* `included_imprints_monthly`
-* `debug_ui`
-
-#### SDK Rules
-
-* Without `since`: treat response as **full authoritative set**
-* With `since`: treat response as **incremental updates only**
-* Removed / inactive records MUST be purged locally
+Inactive records must be purged locally.
 
 ---
 
@@ -156,99 +101,34 @@ Important config fields:
 
 ### `GET /api/mobile/branding/lookup`
 
-Used only when a local cache miss occurs.
+Used **only** on local cache miss.
 
-#### Query Parameters
-
-| Name        | Required |
-| ----------- | -------- |
-| `e164`      | Yes      |
-| `device_id` | No       |
-
-#### Critical Rule
-
-> This endpoint MUST NOT be called synchronously during ring-time.
-
-Results may be cached locally but SHOULD be confirmed by the next sync.
+> Must never be called synchronously during ring-time.
 
 ---
 
-## 7. Usage & Billing Events (Authoritative)
+## 7. Usage & Billing Events
 
-### `POST /api/mobile/branding/event`
+### `POST /api/mobile/branding/imprint`
 
-This endpoint is optional telemetry for:
+Reports successful identity display.
 
-* Usage analytics
-* Reputation telemetry
-
-#### Required Fields
-
-* `phone_number_e164`
-* `outcome`
-* `event_key` (idempotency)
-
-Common `outcome` values:
-
-* `displayed` (billable if counted)
-* `no_match`
-* `branding_disabled`
-* `error`
-
-#### Response Fields
-
-* `counted` (boolean)
-* `reason` (if not counted)
-
-#### Billing Rules
-
-* SDKs MUST only send `displayed` when identity was actually shown
-* Server response is authoritative for billing attribution
-* Retries MUST reuse the same `event_key`
-
-> Billing is derived from successful sync delivery (`GET /api/mobile/branding/sync`). The event endpoint is optional.
+Rules:
+- Best-effort
+- Asynchronous
+- Idempotent via `event_key`
+- Must never block call UI
 
 ---
 
-## 7b. Metrics & Counters (Server-Side Mapping)
-
-Use this table to map reporting terms to the exact endpoint signal:
-
-| Metric | Signal | Endpoint | Notes |
-| ------ | ------ | -------- | ----- |
-| Branding efforts (delivery) | Successful sync delivery | `GET /api/mobile/branding/sync` | Authoritative for billing. |
-| Sync response (ack) | Client acknowledgment | `POST /api/mobile/branding/sync` | Optional legacy acknowledgment. |
-| Imprints (counted) | `counted=true` | `POST /api/mobile/branding/event` | Counted only when eligible. |
-| Branding failures | `counted=false` + `reason` | `POST /api/mobile/branding/event` | Reasons include `no_match`, `disabled`, `cap_reached`, `account_suspended`, `owner_suspended`, `owner_unresolved`, `analytics_only`, `pending_enrichment`, `event_dropped`. |
-| Number matched | `matched=true` | `GET /api/mobile/branding/lookup?format=public` | Network fallback only; not for ring-time. |
-| Calls not matched / ignored | `matched=false` or `counted=false` | `GET /api/mobile/branding/lookup?format=public` or `POST /api/mobile/branding/event` | Use events to track device-side outcomes. |
-
----
-
-## 8. Device Registration & Updates
+## 8. Device Registration
 
 ### `POST /api/mobile/device/register`
-
-Called once per install.
-
-Required:
-
-* `device_id`
-* `platform`
+- Called once per install
+- Registers platform and device_id
 
 ### `POST /api/mobile/device/update`
-
-Used to report:
-
-* OS / app / SDK versions
-* Capability changes
-* Last-seen timestamp
-
-SDKs SHOULD call this:
-
-* On app launch
-* After permission changes
-* After successful sync
+- Reports capability and version changes
 
 ---
 
@@ -256,71 +136,55 @@ SDKs SHOULD call this:
 
 ### `POST /api/mobile/debug/upload`
 
-Debug uploads are **server-authorised only**.
-
-SDKs must check:
-
-```
-config.debug_ui.enabled
-config.debug_ui.request_upload
-```
-
-Uploads must be:
-
-* One-time per nonce
-* Explicitly gated
+Only allowed when explicitly enabled by server config.
 
 ---
 
 ## 10. Runtime Flow Summary
 
-### App Launch
+**App Launch**
+1. Device register/update
+2. Branding sync
+3. Cache assets
 
-1. Register device (if needed)
-2. Update device state
-3. Sync branding dataset
-4. Cache logos
+**Incoming Call**
+1. Local lookup only
+2. Display native call UI
+3. Async imprint event
 
-### Incoming Call (Ring-Time)
-
-1. Normalise number
-2. Local lookup ONLY
-3. Display identity if found
-4. Fire-and-forget usage event
-
-### Background Maintenance
-
-* Incremental sync
-* Asset cleanup
-* Throttled directory reloads (iOS)
+**Background**
+- Incremental sync
+- Asset cleanup
 
 ---
 
-## 11. Error Handling & Retry
+## 11. Error Handling
 
-| Scenario        | Behaviour                   |
-| --------------- | --------------------------- |
-| Network failure | Fail silently               |
-| Event timeout   | Retry with same `event_key` |
-| Rate limit      | Backoff                     |
-| Auth failure    | Disable branding display    |
-
----
-
-## 12. Absolute Rules (Non‑Negotiable)
-
-* Call UI MUST NEVER block
-* Caller identity MUST work offline
-* Billing events MUST be idempotent
-* Sync data is authoritative
-* SDKs MUST obey server gating
+| Scenario | Behaviour |
+|--------|-----------|
+| Network failure | Fail silently |
+| Event timeout | Retry with same key |
+| Auth failure | Disable branding |
 
 ---
 
-## 13. Related Documents
+## 12. Absolute Rules
 
-* `openapi.yaml`
-* `BRANDING_BILLING_SYSTEM.md`
-* `MOBILE_SDK_TESTING_GUIDE.md`
-* `/docs/sdk/ios.mdx`
-* `/docs/sdk/android.mdx`
+- Native dialler remains in control
+- No audio interception
+- No ring-time network dependency
+- Billing events must be idempotent
+
+---
+
+## 13. Related Docs
+
+- `openapi.yaml`
+- `BRANDING_BILLING_SYSTEM.md`
+- `MOBILE_SDK_TESTING_GUIDE.md`
+- `/docs/sdk/ios.md`
+- `/docs/sdk/android.md`
+
+---
+
+**End of document**
