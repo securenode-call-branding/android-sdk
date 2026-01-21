@@ -25,7 +25,7 @@ This guide explains how to integrate the SecureNode SDKs into the iOS and Androi
 
 2. Add the SecureNode iOS SDK:
    - File → Add Packages...
-   - Enter: `https://github.com/SecureNode-Call-Identidy-SDK/apple-ios-sdk.git`
+   - Enter: `https://github.com/securenode-call-branding/ios-sdk.git`
    - Or add the local SDK from `../ios-sdk` as a local package
 
 ### 2. Copy Native Files

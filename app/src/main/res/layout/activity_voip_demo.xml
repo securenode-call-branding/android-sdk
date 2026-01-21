@@ -12,7 +12,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="VoIP Dialer Demo (Self-managed)"
+            android:text="SecureNode VoIP Dialer"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -51,14 +51,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Place outgoing VoIP call (Telecom demo)" />
+            android:text="Place outgoing VoIP call (Telecom Self-managed)" />
 
         <Button
             android:id="@+id/btnIncoming"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Simulate incoming VoIP call (Telecom demo)" />
+            android:text="Simulate incoming VoIP call (Telecom Self-managed)" />
 
         <TextView
             android:id="@+id/status"

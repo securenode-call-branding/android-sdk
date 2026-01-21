@@ -269,6 +269,43 @@ class ApiClient(
         return@withContext false
     }
 
+    /**
+     * Best-effort: record a branding analytics event (non-blocking; safe to retry with event_key).
+     * Used for outcomes like `missed` and `call_returned`.
+     */
+    suspend fun recordBrandingEvent(
+        phoneNumberE164: String,
+        outcome: String,
+        surface: String? = null,
+        displayedAtIso: String? = null,
+        eventKey: String? = null,
+        metaJson: String? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("phone_number_e164", phoneNumberE164)
+            .put("outcome", outcome)
+            .put("surface", surface)
+            .put("displayed_at", displayedAtIso)
+            .put("event_key", eventKey)
+
+        if (!metaJson.isNullOrBlank()) {
+            runCatching {
+                payload.put("meta", JSONObject(metaJson))
+            }
+        }
+
+        val body = payload.toString().toRequestBody("application/json".toMediaType())
+        val urls = endpointCandidates("mobile/branding/event")
+
+        for (url in urls) {
+            val request = Request.Builder().url(url).post(body).build()
+            val response = client.newCall(request).execute()
+            if (response.code == 404) continue
+            if (response.isSuccessful || response.code == 202) return@withContext true
+        }
+        return@withContext false
+    }
+
     private fun buildCompositeTrustManager(): X509TrustManager? {
         val ctx = context ?: return null
         val defaultTm = defaultTrustManager() ?: return null

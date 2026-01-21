@@ -1,4 +1,4 @@
-package com.securenode.sdk.sample
+package com.securenode.sdk
 
 import android.Manifest
 import android.content.pm.PackageManager

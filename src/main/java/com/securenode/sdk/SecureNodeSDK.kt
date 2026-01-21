@@ -7,6 +7,7 @@ import android.telecom.Connection
 import android.telecom.ConnectionRequest
 import android.util.Log
 import com.securenode.sdk.sample.database.BrandingDatabase
+import com.securenode.sdk.sample.database.PendingEventEntity
 import com.securenode.sdk.sample.network.ApiClient
 import com.securenode.sdk.sample.network.BrandingInfo
 import com.securenode.sdk.sample.network.SyncResponse
@@ -15,6 +16,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import java.util.UUID
 
 /**
  * SecureNode Android SDK
@@ -83,6 +90,12 @@ class SecureNodeSDK private constructor(
     companion object {
         private const val TAG = "SecureNodeSDK"
         private const val CACHE_RETENTION_DAYS = 30L
+
+        private fun nowIsoUtc(): String {
+            val fmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+            fmt.timeZone = TimeZone.getTimeZone("UTC")
+            return fmt.format(Date())
+        }
         
         @SuppressLint("StaticFieldLeak")
         @Volatile
@@ -148,12 +161,200 @@ class SecureNodeSDK private constructor(
                 withContext(Dispatchers.Main) {
                     callback(Result.success(response))
                 }
+
+                // Best-effort: flush queued analytics events in the background.
+                // Must never block branding sync success.
+                scope.launch {
+                    try {
+                        flushQueuedEvents()
+                    } catch {
+                        // ignore
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Sync failed", e)
                 withContext(Dispatchers.Main) {
                     callback(Result.failure(e))
                 }
             }
+        }
+    }
+
+    /**
+     * Record a missed call event (analytics-only; never blocks call UX).
+     *
+     * Returns a stable call_id which you can later pass to [recordCallReturned] to track conversions.
+     *
+     * `brandingDisplayed` should be true when your integration displayed any caller identity (full/partial).
+     */
+    @JvmOverloads
+    fun recordMissedCall(
+        phoneNumberE164: String,
+        brandingDisplayed: Boolean,
+        surface: String? = null,
+        occurredAtIso: String? = null
+    ): String {
+        val callId = UUID.randomUUID().toString()
+        queueEventIfTracked(
+            phoneNumberE164 = phoneNumberE164,
+            outcome = "missed",
+            surface = surface,
+            displayedAtIso = occurredAtIso,
+            eventKey = "missed:$callId",
+            metaJson = JSONObject()
+                .put("call_id", callId)
+                .put("branding_displayed", brandingDisplayed)
+                .toString()
+        )
+        return callId
+    }
+
+    /**
+     * Record that a previously missed call was returned later.
+     *
+     * - callId should come from [recordMissedCall]
+     * - brandingDisplayedAtMissed should match what you passed to recordMissedCall (full/partial = true)
+     */
+    @JvmOverloads
+    fun recordCallReturned(
+        phoneNumberE164: String,
+        callId: String,
+        brandingDisplayedAtMissed: Boolean,
+        surface: String? = null,
+        occurredAtIso: String? = null
+    ) {
+        queueEventIfTracked(
+            phoneNumberE164 = phoneNumberE164,
+            outcome = "call_returned",
+            surface = surface,
+            displayedAtIso = occurredAtIso,
+            eventKey = "call_returned:$callId",
+            metaJson = JSONObject()
+                .put("call_id", callId)
+                .put("branding_displayed_at_missed", brandingDisplayedAtMissed)
+                .toString()
+        )
+    }
+
+    /**
+     * Record that an incoming call was observed by the OS/integration (analytics-only).
+     * This is the "total calls seen" baseline for impact graphs.
+     *
+     * Returns a stable call_id you can optionally reuse for other call outcome events.
+     */
+    @JvmOverloads
+    fun recordCallSeen(
+        phoneNumberE164: String,
+        brandingDisplayed: Boolean,
+        surface: String? = null,
+        occurredAtIso: String? = null
+    ): String {
+        val callId = UUID.randomUUID().toString()
+        queueEventIfTracked(
+            phoneNumberE164 = phoneNumberE164,
+            outcome = "call_seen",
+            surface = surface,
+            displayedAtIso = occurredAtIso,
+            eventKey = "call_seen:$callId",
+            metaJson = JSONObject()
+                .put("call_id", callId)
+                .put("branding_displayed", brandingDisplayed)
+                .toString()
+        )
+        return callId
+    }
+
+    private fun queueEventIfTracked(
+        phoneNumberE164: String,
+        outcome: String,
+        surface: String?,
+        displayedAtIso: String?,
+        eventKey: String,
+        metaJson: String?
+    ) {
+        val now = System.currentTimeMillis()
+        val displayedAt = displayedAtIso ?: nowIsoUtc()
+        scope.launch {
+            try {
+                // Only track numbers that are approved + currently in use (synced local cache).
+                // This means: only when the number exists in the local branding table.
+                val tracked = database.brandingDao().getBranding(phoneNumberE164) != null
+                if (!tracked) return@launch
+
+                database.pendingEventDao().insert(
+                    PendingEventEntity(
+                        eventKey = eventKey,
+                        phoneNumberE164 = phoneNumberE164,
+                        outcome = outcome,
+                        surface = surface,
+                        displayedAt = displayedAt,
+                        metaJson = metaJson,
+                        createdAt = now,
+                        status = "queued",
+                        attempts = 0,
+                        lastError = null,
+                        dropReason = null,
+                        updatedAt = now
+                    )
+                )
+            } catch (e: Exception) {
+                // Never break caller UX on analytics failures.
+                Log.w(TAG, "Failed to queue event ($outcome)", e)
+            }
+        }
+    }
+
+    /**
+     * Flush queued events. Best-effort, low retry pressure:
+     * - after 3 failed attempts, drop the event and record the reason.
+     */
+    suspend fun flushQueuedEvents(limit: Int = 25) = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val queued = try {
+            database.pendingEventDao().listQueued(limit)
+        } catch (_e: Exception) {
+            emptyList()
+        }
+        if (queued.isEmpty()) return@withContext
+
+        val sentIds = mutableListOf<Long>()
+        for (evt in queued) {
+            val ok = try {
+                apiClient.recordBrandingEvent(
+                    phoneNumberE164 = evt.phoneNumberE164,
+                    outcome = evt.outcome,
+                    surface = evt.surface,
+                    displayedAtIso = evt.displayedAt,
+                    eventKey = evt.eventKey,
+                    metaJson = evt.metaJson
+                )
+            } catch (e: Exception) {
+                database.pendingEventDao().recordFailure(evt.id, e.message ?: "upload_failed", now)
+                false
+            }
+
+            if (ok) {
+                sentIds.add(evt.id)
+            } else {
+                val attemptsNext = evt.attempts + 1
+                if (attemptsNext >= 3) {
+                    database.pendingEventDao().markDropped(evt.id, "retries_exceeded", now)
+                } else {
+                    database.pendingEventDao().recordFailure(evt.id, "upload_failed", now)
+                }
+            }
+        }
+
+        if (sentIds.isNotEmpty()) {
+            database.pendingEventDao().markSent(sentIds, now)
+        }
+
+        // Cleanup old completed rows to keep DB small.
+        try {
+            val cutoff = now - (7L * 24L * 60L * 60L * 1000L)
+            database.pendingEventDao().deleteCompletedOlderThan(cutoff)
+        } catch {
+            // ignore
         }
     }
 

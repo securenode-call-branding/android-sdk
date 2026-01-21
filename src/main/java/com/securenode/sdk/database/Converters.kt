@@ -1,4 +1,4 @@
-package com.securenode.sdk.database
+package com.securenode.sdk.sample.database
 
 import androidx.room.TypeConverter
 

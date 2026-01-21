@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.securenode.sdk"
+    namespace = "com.securenode.sdk.sample"
     compileSdk = 34
 
     defaultConfig {
@@ -39,7 +39,7 @@ dependencies {
     // Core Android
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
-
+ 
     // Room Database
     val roomVersion = "2.8.4"
     // Room types are part of our public surface (BrandingDatabase extends RoomDatabase),
@@ -59,7 +59,6 @@ dependencies {
 
     // Security
     implementation("androidx.security:security-crypto:1.1.0")
-
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")

@@ -1,11 +1,14 @@
 package com.securenode.sdk.sample
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.telecom.Call
 import android.telecom.CallScreeningService
+import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.securenode.sdk.ImageCache
@@ -44,6 +47,7 @@ class SecureNodeScreeningService : CallScreeningService() {
         )
     }
 
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     private fun showBrandingNotification(
         number: String,
         brandName: String,
@@ -62,7 +66,7 @@ class SecureNodeScreeningService : CallScreeningService() {
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentTitle(if (isTesting) "TESTING • $brandName" else brandName)
             .setContentText(text)
-            .setSubText(if (isTesting) "Testing • Verified by SecureNode" else "Verified by SecureNode")
+            .setSubText(if (isTesting) "Verified by SecureNode" else "Verified by SecureNode")
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
@@ -77,7 +81,7 @@ class SecureNodeScreeningService : CallScreeningService() {
                 val file = File(cached.path!!)
                 if (file.exists()) {
                     try {
-                        val bmp = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
+                        val bmp = BitmapFactory.decodeFile(file.absolutePath)
                         if (bmp != null) {
                             builder.setLargeIcon(bmp)
                         }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -13,7 +14,7 @@
             android:id="@+id/title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="SecureNode Call Identity"
+            android:text="SecureNode Call Identity Trust Engine"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -24,12 +25,88 @@
             android:layout_marginTop="6dp"
             android:text="This app syncs branding and waits for incoming calls to match cached caller IDs." />
 
+        <TextView
+            android:id="@+id/debugHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Debug"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/apiUrlLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="API URLs (tap to open):"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/apiToggle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Show API Endpoints ▼"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:padding="8dp" />
+
+        <TextView
+            android:id="@+id/apiUrlLinks"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoLink="web"
+            android:textSize="12sp"
+            android:visibility="gone"
+            android:text="https://api.securenode.io\nhttps://api.securenode.io/api\nhttps://api.securenode.io/mobile/branding/sync\nhttps://api.securenode.io/mobile/branding/lookup\nhttps://api.securenode.io/mobile/branding/event" />
+
+        <TextView
+            android:id="@+id/apiKeyLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="API Key"
+            android:textSize="12sp" />
+
+        <EditText
+            android:id="@+id/apiKeyInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Paste API key"
+            android:importantForAutofill="no"
+            android:inputType="textVisiblePassword"
+            android:minHeight="48dp"
+            android:textSize="12sp"
+            tools:ignore="HardcodedText" />
+
+        <Button
+            android:id="@+id/saveApiKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Save API Key" />
+
         <Button
             android:id="@+id/rescan"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Scan QR / Update API Key" />
+            android:layout_marginTop="8dp"
+            android:text="Scan QR / Update API Key"
+            tools:ignore="HardcodedText" />
+
+        <Button
+            android:id="@+id/syncNow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Refresh (Sync Now)" />
+
+        <Button
+            android:id="@+id/openDialer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Open Dialer"
+            tools:ignore="VisualLintButtonSize" />
 
         <TextView
             android:id="@+id/status"
@@ -53,7 +130,23 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:enabled="false"
-            android:text="Open VoIP Dialer Demo" />
+            android:text="Open VoIP Dialer" />
+
+        <TextView
+            android:id="@+id/dbHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Local DB (latest)"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/dbDump"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textSize="11sp"
+            android:text="(empty)" />
 
     </LinearLayout>
 </ScrollView>

@@ -8,7 +8,7 @@ import android.telecom.TelecomManager
 
 object VoipPhoneAccount {
     private const val ACCOUNT_ID = "securenode_voip"
-    private const val LABEL = "SecureNode VoIP (Demo)"
+    private const val LABEL = "SecureNode VoIP"
 
     fun getHandle(context: Context): PhoneAccountHandle {
         return PhoneAccountHandle(

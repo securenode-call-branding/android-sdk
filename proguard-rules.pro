@@ -3,8 +3,8 @@
 # proguardFiles setting in build.gradle.
 
 # Keep SecureNode SDK classes
--keep class com.securenode.sdk.** { *; }
--dontwarn com.securenode.sdk.**
+-keep class com.securenode.sdk.sample.** { *; }
+-dontwarn com.securenode.sdk.sample.**
 
 # Keep Room database classes
 -keep class * extends androidx.room.RoomDatabase

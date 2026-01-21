@@ -1,4 +1,4 @@
-package com.securenode.sdk
+package com.securenode.sdk.sample
 
 import android.content.Context
 import android.net.Uri
@@ -20,15 +20,14 @@ import java.util.concurrent.TimeUnit
  * Stores images in app's cache directory for fast retrieval.
  */
 class ImageCache(private val context: Context) {
-    private val cacheDir: File
+    private val cacheDir: File = File(context.cacheDir, "SecureNodeBranding").apply {
+        if (!exists()) {
+            mkdirs()
+        }
+    }
     private val client: OkHttpClient
 
     init {
-        cacheDir = File(context.cacheDir, "SecureNodeBranding").apply {
-            if (!exists()) {
-                mkdirs()
-            }
-        }
 
         client = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
