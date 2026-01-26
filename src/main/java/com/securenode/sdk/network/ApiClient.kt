@@ -1,10 +1,10 @@
-package com.securenode.sdk.sample.network
+package com.securenode.sdk.network
 
 import android.content.Context
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.Log
-import com.securenode.sdk.sample.DeviceIdentity
+import com.securenode.sdk.DeviceIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -249,13 +249,21 @@ class ApiClient(
      */
     suspend fun recordImprint(
         phoneNumberE164: String,
-        displayedAtIso: String? = null
+        displayedAtIso: String? = null,
+        platform: String? = null,
+        osVersion: String? = null,
+        deviceModel: String? = null,
+        campaignId: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         val deviceId = deviceIdOrNull() ?: return@withContext false
         val payload = JSONObject()
             .put("phone_number_e164", phoneNumberE164)
             .put("displayed_at", displayedAtIso)
             .put("device_id", deviceId)
+        if (!platform.isNullOrBlank()) payload.put("platform", platform)
+        if (!osVersion.isNullOrBlank()) payload.put("os_version", osVersion)
+        if (!deviceModel.isNullOrBlank()) payload.put("device_model", deviceModel)
+        if (!campaignId.isNullOrBlank()) payload.put("campaign_id", campaignId)
             .toString()
         val body = payload.toRequestBody("application/json".toMediaType())
         val urls = endpointCandidates("mobile/branding/imprint")
@@ -281,6 +289,7 @@ class ApiClient(
         eventKey: String? = null,
         metaJson: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
+        val deviceId = deviceIdOrNull()
         val payload = JSONObject()
             .put("phone_number_e164", phoneNumberE164)
             .put("outcome", outcome)
@@ -288,10 +297,23 @@ class ApiClient(
             .put("displayed_at", displayedAtIso)
             .put("event_key", eventKey)
 
-        if (!metaJson.isNullOrBlank()) {
-            runCatching {
-                payload.put("meta", JSONObject(metaJson))
-            }
+        if (!deviceId.isNullOrBlank()) {
+            payload.put("device_id", deviceId)
+        }
+
+        val meta = if (!metaJson.isNullOrBlank()) {
+            runCatching { JSONObject(metaJson) }.getOrNull() ?: JSONObject()
+        } else {
+            JSONObject()
+        }
+        if (!meta.has("platform")) {
+            meta.put("platform", "android")
+        }
+        if (!deviceId.isNullOrBlank() && !meta.has("device_id")) {
+            meta.put("device_id", deviceId)
+        }
+        if (meta.length() > 0) {
+            payload.put("meta", meta)
         }
 
         val body = payload.toString().toRequestBody("application/json".toMediaType())

@@ -1,4 +1,4 @@
-package com.securenode.sdk.sample
+package com.securenode.sdk.app
 
 import android.content.ComponentName
 import android.content.Context

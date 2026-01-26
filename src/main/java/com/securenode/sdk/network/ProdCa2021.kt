@@ -1,4 +1,4 @@
-package com.securenode.sdk.sample.network
+package com.securenode.sdk.network
 
 import android.util.Base64
 import java.io.ByteArrayInputStream

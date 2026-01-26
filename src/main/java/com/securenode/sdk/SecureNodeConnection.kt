@@ -1,4 +1,4 @@
-package com.securenode.sdk.sample
+package com.securenode.sdk
 
 import android.content.Context
 import android.net.Uri
@@ -8,13 +8,14 @@ import android.telecom.ConnectionRequest
 import android.telecom.StatusHints
 import android.telecom.TelecomManager
 import android.util.Log
-import com.securenode.sdk.sample.database.BrandingDatabase
-import com.securenode.sdk.sample.network.ApiClient
-import com.securenode.sdk.sample.network.BrandingInfo
+import com.securenode.sdk.database.BrandingDatabase
+import com.securenode.sdk.network.ApiClient
+import com.securenode.sdk.network.BrandingInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.security.MessageDigest
 
 /**
  * SecureNode branded Connection implementation
@@ -27,7 +28,8 @@ internal class SecureNodeConnection(
     private val connectionRequest: ConnectionRequest?,
     private val database: BrandingDatabase,
     private val apiClient: ApiClient,
-    private val imageCache: ImageCache
+    private val imageCache: ImageCache,
+    private val campaignId: String?
 ) : Connection() {
     
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -73,7 +75,7 @@ internal class SecureNodeConnection(
                     // Cache for next time
                     database.run {
                         brandingDao().insertBranding(
-                                        com.securenode.sdk.sample.database.BrandingEntity(
+                                        com.securenode.sdk.database.BrandingEntity(
                                             phoneNumberE164 = branding.phoneNumberE164,
                                             brandName = branding.brandName,
                                             logoUrl = branding.logoUrl,
@@ -133,7 +135,13 @@ internal class SecureNodeConnection(
             if (!brandName.isNullOrBlank()) {
                 scope.launch {
                     try {
-                        apiClient.recordImprint(phoneNumberE164)
+                        apiClient.recordImprint(
+                            phoneNumberE164 = phoneNumberE164,
+                            platform = "android",
+                            osVersion = Build.VERSION.RELEASE,
+                            deviceModel = deviceModelHash(),
+                            campaignId = campaignId
+                        )
                     } catch {
                         // ignore
                     }
@@ -167,6 +175,14 @@ internal class SecureNodeConnection(
 
     companion object {
         private const val TAG = "SecureNodeConnection"
+    }
+
+    private fun deviceModelHash(): String? = sha256Hex(Build.MODEL)
+
+    private fun sha256Hex(value: String?): String? {
+        if (value.isNullOrBlank()) return null
+        val bytes = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 }
 

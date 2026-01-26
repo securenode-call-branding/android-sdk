@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.securenode.sdk.sample"
+    namespace = "com.securenode.sdk"
     compileSdk = 34
 
     defaultConfig {

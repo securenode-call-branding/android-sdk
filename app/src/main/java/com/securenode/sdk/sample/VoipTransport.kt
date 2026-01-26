@@ -1,4 +1,4 @@
-package com.securenode.sdk.sample
+package com.securenode.sdk.app
 
 /**
  * Integration point for client VoIP stacks.

@@ -1,4 +1,4 @@
-package com.securenode.sdk.sample
+package com.securenode.sdk
 
 /**
  * Feature flags that are safe to ship "off" and later enable without changing integration code.

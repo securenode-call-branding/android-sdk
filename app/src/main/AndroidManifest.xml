@@ -18,18 +18,6 @@
             android:exported="true">
         </activity>
 
-        <!-- Dialer secret code entry: *#*#7328736633#*#* -->
-        <receiver
-            android:name=".SecretCodeReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.provider.Telephony.SECRET_CODE" />
-                <data
-                    android:scheme="android_secret_code"
-                    android:host="6633" />
-            </intent-filter>
-        </receiver>
-
         <activity
             android:name=".QrScanActivity"
             android:exported="false" />

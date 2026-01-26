@@ -1,4 +1,4 @@
-package com.securenode.sdk.sample.database
+package com.securenode.sdk.database
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

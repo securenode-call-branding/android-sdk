@@ -1,8 +1,8 @@
-package com.securenode.sdk.sample.voice
+package com.securenode.sdk.voice
 
 import android.content.Context
 import android.util.Log
-import com.securenode.sdk.sample.SecureNodeSDK
+import com.securenode.sdk.SecureNodeSDK
 
 /**
  * Secure Voice (VoIP / SIP) upgrade path.

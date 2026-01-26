@@ -8,11 +8,11 @@ plugins {
 layout.buildDirectory.set(rootProject.layout.buildDirectory.dir("app"))
 
 android {
-    namespace = "com.securenode.sdk.sample"
+    namespace = "com.securenode.sdk.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.securenode.sdk.sample"
+        applicationId = "com.securenode.sdk.app"
         minSdk = 23
         targetSdk = 34
         versionCode = 1

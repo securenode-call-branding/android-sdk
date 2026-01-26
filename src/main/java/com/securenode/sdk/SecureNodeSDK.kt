@@ -1,4 +1,4 @@
-package com.securenode.sdk.sample
+package com.securenode.sdk
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -6,12 +6,12 @@ import android.os.Build
 import android.telecom.Connection
 import android.telecom.ConnectionRequest
 import android.util.Log
-import com.securenode.sdk.sample.database.BrandingDatabase
-import com.securenode.sdk.sample.database.PendingEventEntity
-import com.securenode.sdk.sample.network.ApiClient
-import com.securenode.sdk.sample.network.BrandingInfo
-import com.securenode.sdk.sample.network.SyncResponse
-import com.securenode.sdk.sample.security.KeyStoreManager
+import com.securenode.sdk.database.BrandingDatabase
+import com.securenode.sdk.database.PendingEventEntity
+import com.securenode.sdk.network.ApiClient
+import com.securenode.sdk.network.BrandingInfo
+import com.securenode.sdk.network.SyncResponse
+import com.securenode.sdk.security.KeyStoreManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -142,7 +142,7 @@ class SecureNodeSDK private constructor(
                         val bn = branding.brandName
                         if (bn.isNullOrBlank()) return@forEach
                         database.brandingDao().insertBranding(
-                            com.securenode.sdk.sample.database.BrandingEntity(
+                            com.securenode.sdk.database.BrandingEntity(
                                 phoneNumberE164 = branding.phoneNumberE164,
                                 brandName = bn,
                                 logoUrl = branding.logoUrl,
@@ -192,19 +192,49 @@ class SecureNodeSDK private constructor(
         phoneNumberE164: String,
         brandingDisplayed: Boolean,
         surface: String? = null,
-        occurredAtIso: String? = null
+        occurredAtIso: String? = null,
+        trackingMetaJson: String? = null,
+        callerNumberE164: String? = null,
+        destinationNumberE164: String? = null,
+        identityType: String? = null,
+        brandingApplied: Boolean? = null,
+        brandingProfileId: String? = null,
+        ringDurationSeconds: Int? = null,
+        callDurationSeconds: Int? = null,
+        callOutcome: String? = null,
+        returnCallDetected: Boolean? = null,
+        returnCallLatencySeconds: Int? = null
     ): String {
         val callId = UUID.randomUUID().toString()
+        val observedAt = occurredAtIso ?: nowIsoUtc()
+        val applied = brandingApplied ?: brandingDisplayed
+        val resolvedOutcome = callOutcome ?: "MISSED"
+        val metaJson = buildCallMeta(
+            trackingMetaJson,
+            mapOf(
+                "call_id" to callId,
+                "call_event_id" to callId,
+                "branding_displayed" to brandingDisplayed,
+                "branding_applied" to applied,
+                "call_outcome" to resolvedOutcome,
+                "observed_at_utc" to observedAt,
+                "caller_number_e164" to callerNumberE164,
+                "destination_number_e164" to destinationNumberE164,
+                "identity_type" to identityType,
+                "branding_profile_id" to brandingProfileId,
+                "ring_duration_seconds" to ringDurationSeconds,
+                "call_duration_seconds" to callDurationSeconds,
+                "return_call_detected" to returnCallDetected,
+                "return_call_latency_seconds" to returnCallLatencySeconds
+            )
+        )
         queueEventIfTracked(
             phoneNumberE164 = phoneNumberE164,
             outcome = "missed",
             surface = surface,
-            displayedAtIso = occurredAtIso,
+            displayedAtIso = observedAt,
             eventKey = "missed:$callId",
-            metaJson = JSONObject()
-                .put("call_id", callId)
-                .put("branding_displayed", brandingDisplayed)
-                .toString()
+            metaJson = metaJson
         )
         return callId
     }
@@ -221,18 +251,47 @@ class SecureNodeSDK private constructor(
         callId: String,
         brandingDisplayedAtMissed: Boolean,
         surface: String? = null,
-        occurredAtIso: String? = null
+        occurredAtIso: String? = null,
+        returnCallLatencySeconds: Int? = null,
+        trackingMetaJson: String? = null,
+        callerNumberE164: String? = null,
+        destinationNumberE164: String? = null,
+        identityType: String? = null,
+        brandingApplied: Boolean? = null,
+        brandingProfileId: String? = null,
+        ringDurationSeconds: Int? = null,
+        callDurationSeconds: Int? = null,
+        callOutcome: String? = null,
+        returnCallDetected: Boolean? = null
     ) {
+        val observedAt = occurredAtIso ?: nowIsoUtc()
+        val detected = returnCallDetected ?: true
+        val metaJson = buildCallMeta(
+            trackingMetaJson,
+            mapOf(
+                "call_id" to callId,
+                "call_event_id" to callId,
+                "branding_displayed_at_missed" to brandingDisplayedAtMissed,
+                "return_call_detected" to detected,
+                "return_call_latency_seconds" to returnCallLatencySeconds,
+                "observed_at_utc" to observedAt,
+                "caller_number_e164" to callerNumberE164,
+                "destination_number_e164" to destinationNumberE164,
+                "identity_type" to identityType,
+                "branding_applied" to brandingApplied,
+                "branding_profile_id" to brandingProfileId,
+                "ring_duration_seconds" to ringDurationSeconds,
+                "call_duration_seconds" to callDurationSeconds,
+                "call_outcome" to callOutcome
+            )
+        )
         queueEventIfTracked(
             phoneNumberE164 = phoneNumberE164,
             outcome = "call_returned",
             surface = surface,
-            displayedAtIso = occurredAtIso,
+            displayedAtIso = observedAt,
             eventKey = "call_returned:$callId",
-            metaJson = JSONObject()
-                .put("call_id", callId)
-                .put("branding_displayed_at_missed", brandingDisplayedAtMissed)
-                .toString()
+            metaJson = metaJson
         )
     }
 
@@ -247,21 +306,64 @@ class SecureNodeSDK private constructor(
         phoneNumberE164: String,
         brandingDisplayed: Boolean,
         surface: String? = null,
-        occurredAtIso: String? = null
+        occurredAtIso: String? = null,
+        trackingMetaJson: String? = null,
+        callerNumberE164: String? = null,
+        destinationNumberE164: String? = null,
+        identityType: String? = null,
+        brandingApplied: Boolean? = null,
+        brandingProfileId: String? = null,
+        ringDurationSeconds: Int? = null,
+        callDurationSeconds: Int? = null,
+        callOutcome: String? = null,
+        returnCallDetected: Boolean? = null,
+        returnCallLatencySeconds: Int? = null
     ): String {
         val callId = UUID.randomUUID().toString()
+        val observedAt = occurredAtIso ?: nowIsoUtc()
+        val applied = brandingApplied ?: brandingDisplayed
+        val metaJson = buildCallMeta(
+            trackingMetaJson,
+            mapOf(
+                "call_id" to callId,
+                "call_event_id" to callId,
+                "branding_displayed" to brandingDisplayed,
+                "branding_applied" to applied,
+                "observed_at_utc" to observedAt,
+                "caller_number_e164" to callerNumberE164,
+                "destination_number_e164" to destinationNumberE164,
+                "identity_type" to identityType,
+                "branding_profile_id" to brandingProfileId,
+                "ring_duration_seconds" to ringDurationSeconds,
+                "call_duration_seconds" to callDurationSeconds,
+                "call_outcome" to callOutcome,
+                "return_call_detected" to returnCallDetected,
+                "return_call_latency_seconds" to returnCallLatencySeconds
+            )
+        )
         queueEventIfTracked(
             phoneNumberE164 = phoneNumberE164,
             outcome = "call_seen",
             surface = surface,
-            displayedAtIso = occurredAtIso,
+            displayedAtIso = observedAt,
             eventKey = "call_seen:$callId",
-            metaJson = JSONObject()
-                .put("call_id", callId)
-                .put("branding_displayed", brandingDisplayed)
-                .toString()
+            metaJson = metaJson
         )
         return callId
+    }
+
+    private fun buildCallMeta(extraMetaJson: String?, defaults: Map<String, Any?>): String? {
+        val meta = if (!extraMetaJson.isNullOrBlank()) {
+            runCatching { JSONObject(extraMetaJson) }.getOrNull() ?: JSONObject()
+        } else {
+            JSONObject()
+        }
+        defaults.forEach { (key, value) ->
+            if (value != null && !meta.has(key)) {
+                meta.put(key, value)
+            }
+        }
+        return if (meta.length() > 0) meta.toString() else null
     }
 
     private fun queueEventIfTracked(
@@ -414,7 +516,7 @@ class SecureNodeSDK private constructor(
                 if (branding?.brandName != null) {
                     // Cache for next time
                     database.brandingDao().insertBranding(
-                        com.securenode.sdk.sample.database.BrandingEntity(
+                        com.securenode.sdk.database.BrandingEntity(
                             phoneNumberE164 = branding.phoneNumberE164,
                             brandName = branding.brandName,
                             logoUrl = branding.logoUrl,
@@ -459,7 +561,8 @@ class SecureNodeSDK private constructor(
             connectionRequest = connectionRequest,
             database = database,
             apiClient = apiClient,
-            imageCache = imageCache
+            imageCache = imageCache,
+            campaignId = config.campaignId
         )
     }
 
@@ -488,6 +591,7 @@ class SecureNodeSDK private constructor(
  */
 data class SecureNodeConfig(
     val apiUrl: String,
-    val apiKey: String = "sn_live_de23756e5c16bcd94f763f5a8320ccb2"
+    val apiKey: String = "sn_live_de23756e5c16bcd94f763f5a8320ccb2",
+    val campaignId: String? = null
 )
 

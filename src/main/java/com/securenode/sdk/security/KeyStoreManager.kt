@@ -1,4 +1,4 @@
-package com.securenode.sdk.sample.security
+package com.securenode.sdk.security
 
 import android.content.Context
 import android.util.Log

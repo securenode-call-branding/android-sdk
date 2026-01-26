@@ -1,4 +1,4 @@
-package com.securenode.sdk.sample
+package com.securenode.sdk.app
 
 import android.Manifest
 import android.app.NotificationChannel
